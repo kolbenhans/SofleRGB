@@ -21,6 +21,14 @@
     #endif
 #endif
 
+enum sofle_layers {
+    _QWERTZ = 0,
+    _RAISE,
+    _NUMPAD,
+    _AMBIENT,
+    _GAMING
+};
+
 enum custom_keycodes {
     KC_QWERTZ = SAFE_RANGE,
     KC_RAISE,
