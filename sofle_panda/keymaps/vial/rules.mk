@@ -1,3 +1,5 @@
+SRC += signalrgb_split.c
+
 # Vial-Features
 COMBO_ENABLE = yes          # Enable key combinations (Chords) for special actions
 KEY_OVERRIDE_ENABLE = yes   # Allow certain keys to override others (e.g., Shift + Backspace = Delete)
