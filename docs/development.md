@@ -2,13 +2,13 @@
 
 | Keymap | Lighting system |
 |---|---|
-| `customLights` | Keycode-derived (below) |
+| `dynamicLights` | Keycode-derived (below) |
 | `comboRGB`, `keyColors` | WebGUI-driven, EEPROM-backed — see [webgui-usage.md](webgui-usage.md) |
 | `vial`, `signalrgb` | Stock effects only |
 
-## customLights — keycode-derived lighting
+## dynamicLights — keycode-derived lighting
 
-`sofle_rgb/keymaps/customLights/dynamicLights.c` + `rgb_matrix_user.inc`. Registered as RGB Matrix effect `dynamic_lights`, default mode at boot, re-activatable via `USER01` keycode.
+`sofle_rgb/keymaps/dynamicLights/dynamicLights.c` + `rgb_matrix_user.inc`. Registered as RGB Matrix effect `dynamic_lights`, default mode at boot, re-activatable via `USER01` keycode.
 
 Colors keys by function, read from the active Vial keymap — no manual per-key setup. Cache rebuilds only on layer/brightness/lock-state change or Vial keymap edit (FNV-1a checksum, checked 1×/sec).
 
@@ -31,7 +31,7 @@ USER_ENTRY_WAVE_STARTUP      // viz_frame entry animation trigger
 
 ## viz_frame internals
 
-`entry_wave.c` + `rgb_matrix_user.inc`, in `customLights`/`comboRGB`. `g_direct_mode_colors[]` fills via Raw HID on master only.
+`entry_wave.c` + `rgb_matrix_user.inc`, in `dynamicLights`/`comboRGB`. `g_direct_mode_colors[]` fills via Raw HID on master only.
 
 - `RPC_M2S_BUFFER_SIZE` default (32B) is too small for the half-buffer push (36 LEDs × 3B = 108B) — `transaction_rpc_send()` silently fails over the limit, no error. Set to 112.
 - Sync must branch on `is_keyboard_left()`, not a fixed offset — hardcoding "right half = remote" breaks when the right half is master.

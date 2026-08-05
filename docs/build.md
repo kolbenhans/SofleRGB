@@ -32,7 +32,7 @@ Must be a real submodule, not a symlink — QMK's module lookup silently fails o
 
 ```bash
 cd ~/projects/vial-qmk
-qmk compile -kb sofle_rgb -km <vial|keyColors|comboRGB|signalrgb|customLights>
+qmk compile -kb sofle_rgb -km <vial|keyColors|comboRGB|signalrgb|dynamicLights>
 ```
 
 Output: `.build/sofle_rgb_<keymap>.uf2`

@@ -1,6 +1,6 @@
 # viz_frame — Audio Visualizer
 
-In `customLights` and `comboRGB` only. Rendering (FFT, palette, frames) runs in Python on the host; firmware just displays the colors it receives over Raw HID.
+In `dynamicLights` and `comboRGB` only. Rendering (FFT, palette, frames) runs in Python on the host; firmware just displays the colors it receives over Raw HID.
 
 ```bash
 git submodule update --init --recursive
