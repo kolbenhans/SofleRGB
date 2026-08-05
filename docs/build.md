@@ -28,6 +28,16 @@ git submodule update --init --recursive -- modules/signalrgb
 ```
 Must be a real submodule, not a symlink — QMK's module lookup silently fails on symlinked module folders (Python 3.13+).
 
+## keyColors / dynamicLights / comboRGB keymaps only
+
+These report live layer/key state to [KeyPeek](https://github.com/srwi/keypeek) (optional companion desktop app):
+
+```bash
+cd ~/projects/vial-qmk
+git submodule add https://github.com/srwi/qmk-modules.git modules/srwi
+git submodule update --init --recursive -- modules/srwi
+```
+
 ## Build
 
 ```bash

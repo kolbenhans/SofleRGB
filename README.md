@@ -43,6 +43,13 @@ git submodule update --init --recursive -- modules/signalrgb
 ```
 (must be a real submodule, not a symlink — qmk's module lookup won't find symlinked module folders.)
 
+**`keycolors` / `dynamiclights` / `comborgb`**, one extra step — these three also report live layer/key state to [KeyPeek](https://github.com/srwi/keypeek) (a separate desktop app, optional):
+```bash
+cd ~/projects/vial-qmk
+git submodule add https://github.com/srwi/qmk-modules.git modules/srwi
+git submodule update --init --recursive -- modules/srwi
+```
+
 **`comborgb` / `keycolors`**: open **https://webgui.212-227-193-242.sslip.io/** in chrome/edge, connect, click keys, pick colors, save. no install needed. run it locally instead: [webgui usage](docs/webgui-usage.md).
 
 ## contents
