@@ -1,40 +1,56 @@
 # SofleRGB
 
-Blank Vial QMK firmware source for the "sofle_panda" split keyboard (Pandakb Sofle, RP2040, VialRGB/OLED).
+Vial-QMK firmware for the Sofle RGB — five keymaps, pick one, build it, flash it.
 
-Stock VIA/Vial keymap with the full standard RGB Matrix effect set and OLED animations. No custom RGB effects, no host-side lighting tools — just the keyboard source as dropped into a `vial-qmk` tree.
+Don't want to build it yourself? Prebuilt `.uf2` files for every keymap are in [`firmware/`](firmware/) — skip straight to [Flashing](docs/flashing.md).
 
-## Contents
+## Which keymap?
 
-- `sofle_panda/` — keyboard source (drop into `vial-qmk/keyboards/sofle_panda`)
-- `modules/signalrgb/` — [SignalRGB](https://signalrgb.com/) community module (see below)
+| Keymap | What it is |
+|---|---|
+| `vial` | Stock Vial, no custom lighting |
+| `keycolors` | same webgui colors, no visualizer/python — leanest |
+| `comboRGB` | Pick your own key colors via [browser WebGUI](docs/webgui-usage.md) + audio visualizer |
+| `signalrgb` | Stock Vial + [SignalRGB](https://signalrgb.com/) PC sync |
+| `customLights` | Keys auto-color by function, no setup. Includes [audio visualizer](docs/viz_frame.md) |
 
-## Build
+unsure? `keycolors` for just picking colors. `comborgb` if you also want the visualizer.
+
+## quick start
 
 ```bash
 git clone --depth 1 https://github.com/vial-kb/vial-qmk ~/projects/vial-qmk
-cd ~/projects/vial-qmk && git submodule update --init --recursive --depth 1
+cd ~/projects/vial-qmk
+git submodule update --init --recursive --depth 1
+python3 -m pip install -r requirements.txt
 
-ln -s ~/projects/SofleRGB/sofle_panda ~/projects/vial-qmk/keyboards/sofle_panda
+git clone --recursive https://github.com/kolbenhans/soflergb.git ~/projects/soflergb
+ln -s ~/projects/soflergb/sofle_rgb ~/projects/vial-qmk/keyboards/sofle_rgb
 
-mkdir -p ~/projects/vial-qmk/modules
-cp -r ~/projects/SofleRGB/modules/signalrgb ~/projects/vial-qmk/modules/signalrgb
-
-qmk compile -kb sofle_panda -km vial
+cd ~/projects/vial-qmk
+qmk compile -kb sofle_rgb -km keycolors   # or: vial, signalrgb, customlights, comborgb
 ```
 
-Output: `.build/sofle_panda_vial.uf2`
+copy `.build/sofle_rgb_<keymap>.uf2` onto the keyboard's uf2 drive — **both halves separately**. details: [build guide](docs/build.md), [flashing guide](docs/flashing.md).
 
-## Flashing
+**`keycolors` / `customlights` / `comborgb`**: the lighting effect is default at boot, but custom effects don't show up in Vial's effect list — if it ever switches off (another effect picked, EEPROM not fresh), bind `User 1` to a key in Vial (**User** tab → drag onto a key) to bring it back.
 
-Split keyboard — flash **both halves individually**, double-tap reset into the RP2040 UF2 bootloader.
+**`signalrgb` only**, one extra step:
+```bash
+cd ~/projects/vial-qmk
+git submodule add https://github.com/srgbmods/qmk_community_module modules/signalrgb
+git submodule update --init --recursive -- modules/signalrgb
+```
+(must be a real submodule, not a symlink — qmk's module lookup won't find symlinked module folders.)
 
-## SignalRGB
+**`comborgb` / `keycolors`**: open **https://webgui.212-227-193-242.sslip.io/** in chrome/edge, connect, click keys, pick colors, save. no install needed. run it locally instead: [webgui usage](docs/webgui-usage.md).
 
-Vendored copy of [SRGBmods/QMK_Community_Module](https://github.com/SRGBmods/QMK_Community_Module) (early WIP upstream), minus its `config.h` — that file `#undef`s most stock `ENABLE_RGB_MATRIX_*` effects to save flash, which conflicts with this repo's "keep the full stock effect set" goal. Enabled via `keymaps/vial/keymap.json` (`"modules": ["signalrgb"]`).
+## contents
 
-The module streams arbitrary per-LED colors over raw HID to the master half only. Since stock `SPLIT_RGB_MATRIX` only syncs mode/hsv/speed (not raw pixel data), `keymaps/vial/signalrgb_split.c` mirrors the remote half's colors to the slave over its own RPC transaction (`USER_SYNC_SIGNALRGB`) — same pattern the original dynamic-lightning firmware used for viz_frame.
+- `sofle_rgb/` — keyboard source
+- `webgui/` — browser color picker (`comborgb`/`keycolors`)
+- `python/` — audio visualizer gui (`customlights`/`comborgb`)
 
-Module dir must be a **real copy**, not a symlink — QMK's module discovery (`lib/python/qmk/community_modules.py`) uses `Path.rglob()`, which does not traverse symlinked directories on Python 3.13+ (confirmed against a real build: `qmk compile` silently reports `Module 'signalrgb' not found` with a symlink, works fine with a copy). Re-copy after pulling changes from this repo.
+## docs
 
-`modules/signalrgb/qmk_version.h` has placeholder version bytes. From `~/projects/vial-qmk/modules/signalrgb/`, run `./gen-version.sh` to stamp the real version before relying on `GET_QMK_VERSION`.
+[build](docs/build.md) · [flashing](docs/flashing.md) · [development](docs/development.md) · [audio visualizer](docs/viz_frame.md) · [webgui usage](docs/webgui-usage.md)
