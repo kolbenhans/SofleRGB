@@ -4,7 +4,7 @@
 |---|---|
 | `dynamicLights` | Keycode-derived (below) |
 | `comboRGB`, `keyColors` | WebGUI-driven, EEPROM-backed — see [webgui-usage.md](webgui-usage.md) |
-| `vial`, `signalrgb` | Stock effects only |
+| `vial` | Stock effects only |
 
 ## dynamicLights — keycode-derived lighting
 

@@ -19,15 +19,6 @@ ln -s ~/projects/SofleRGB/sofle_rgb ~/projects/vial-qmk/keyboards/sofle_rgb
 
 Windows without QMK MSYS, use `mklink /D` instead of `ln -s` (needs admin).
 
-## signalrgb keymap only
-
-```bash
-cd ~/projects/vial-qmk
-git submodule add https://github.com/SRGBmods/QMK_Community_Module modules/signalrgb
-git submodule update --init --recursive -- modules/signalrgb
-```
-Must be a real submodule, not a symlink — QMK's module lookup silently fails on symlinked module folders (Python 3.13+).
-
 ## keyColors / dynamicLights / comboRGB keymaps only
 
 These report live layer/key state to [KeyPeek](https://github.com/srwi/keypeek) (optional companion desktop app):
@@ -42,7 +33,7 @@ git submodule update --init --recursive -- modules/srwi
 
 ```bash
 cd ~/projects/vial-qmk
-qmk compile -kb sofle_rgb -km <vial|keyColors|comboRGB|signalrgb|dynamicLights>
+qmk compile -kb sofle_rgb -km <vial|keyColors|comboRGB|dynamicLights>
 ```
 
 Output: `.build/sofle_rgb_<keymap>.uf2`
