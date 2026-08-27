@@ -1,5 +1,5 @@
 SRC += dynamicLights.c    # Include the dynamicLights logic into the build
-SRC += entry_wave.c          # Entry-wave transition animation + Python mode-switch dispatch
+SRC += viz_glue.c            # keymap-level Raw HID glue for the kolbenhans/viz_relay module
 
 # Vial-Features
 COMBO_ENABLE = yes          # Enable key combinations (Chords) for special actions

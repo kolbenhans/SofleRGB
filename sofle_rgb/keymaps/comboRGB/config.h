@@ -48,13 +48,15 @@
 #define OLED_EFFECT_LUNABONGO
 
 #ifdef RGB_MATRIX_ENABLE
-#    define RGB_MATRIX_DEFAULT_MODE RGB_MATRIX_CUSTOM_dynamic_lights
+#    define RGB_MATRIX_DEFAULT_MODE RGB_MATRIX_COMMUNITY_MODULE_key_colors
 #endif
 
 // WebGUI-assigned per-key/per-layer colors + blink colors + lock-state flags,
-// persisted as a keyboard-level EEPROM datablock (dynamic_lights.c:
+// persisted as a keyboard-level EEPROM datablock (kolbenhans/key_colors module:
 // key_colors[8][72] + blink_colors[8][72] + key_lock_flags[8][72]).
 // 8*72*3 (rgb) + 8*72*3 (blink rgb) + 8*72*1 (flags) = 1728+1728+576 = 4032 bytes.
+// Kept here (not in the module) since it depends on this keymap's
+// DYNAMIC_KEYMAP_LAYER_COUNT and this board's Vial EEPROM budget.
 #define EECONFIG_KB_DATA_SIZE 4032
 
 // Default wear-leveling backing (8192B -> 4096B usable) is fully claimed by
@@ -65,11 +67,20 @@
 
 #define PERMISSIVE_HOLD
 
-#define SPLIT_TRANSACTION_IDS_USER USER_SYNC_LIGHTS_A, USER_SYNC_LIGHTS_B, USER_SYNC_LIGHTS_C, USER_DYNAMIC_LIGHTS_STARTUP, USER_SYNC_RGB_DIRECT, USER_ENTRY_WAVE_STARTUP
+// This vial-qmk checkout predates upstream QMK's SPLIT_TRANSACTION_IDS_MODULE_*
+// mechanism (module-owned split transaction IDs) — both modules' own config.h
+// already declare their SPLIT_TRANSACTION_IDS_MODULE_* for forward-compat,
+// but this fork's build system silently ignores it. Interim shim until
+// vial-qmk catches up: declare the same identifiers here too, the modules'
+// .c files only need the names to exist as enum constants somewhere.
+#define SPLIT_TRANSACTION_IDS_USER \
+    KEY_COLORS_COLORS_DELTA, KEY_COLORS_BLINK_DELTA, KEY_COLORS_LOCK_FLAGS_DELTA, \
+    KEY_COLORS_COMMIT, KEY_COLORS_STARTUP, \
+    VIZ_RELAY_SYNC_RGB_DIRECT, VIZ_RELAY_ENTRY_WAVE_STARTUP
 
 // --- keypeek (srwi/keypeek module) ---
 // Its own raw_hid_receive_kb calls raw_hid_receive_user(), which doesn't
 // exist on vial-qmk. Disable it, we chain keypeek_handle_command()
-// from our own raw_hid_receive_kb in entry_wave.c instead.
+// from our own raw_hid_receive_kb in rgb_glue.c instead.
 #define KEYPEEK_DISABLE_RAW_HID_HANDLER
 // --- end keypeek ---

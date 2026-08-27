@@ -1,12 +1,7 @@
 #include QMK_KEYBOARD_H
 #include "transactions.h"
 #include "dynamicLights.h"
-#include "entry_wave.h"
 #include <string.h>
-
-#ifdef RGB_MATRIX_EFFECT_VIALRGB_DIRECT
-extern HSV g_direct_mode_colors[RGB_MATRIX_LED_COUNT];
-#endif
 
 #if defined(RGB_MATRIX_ENABLE)
 
@@ -15,7 +10,6 @@ extern HSV g_direct_mode_colors[RGB_MATRIX_LED_COUNT];
 #define KEY_ROWS      10
 #define KEY_COLS      6
 #define KEY_LED_COUNT 72
-#define SYNC_HALF_SIZE (KEY_LED_COUNT / 2)
 
 // ─── Startup animation ───────────────────────────────────────────────────────
 
@@ -440,52 +434,18 @@ static void startup_sync_handler(uint8_t in_buflen, const void *in_data,
     startup_reset();
 }
 
-// ─── Direct-mode (viz_frame) split sync ─────────────────────────────────────
-// g_direct_mode_colors is filled via Raw HID FASTSET, which only reaches the
-// master half over USB — the slave half needs its portion pushed over the
-// split link explicitly, same mechanism as m57's dynamic_lights.c.
-//
-// LED indices 0..SYNC_HALF_SIZE-1 are always the physical left half and
-// SYNC_HALF_SIZE..KEY_LED_COUNT-1 the right half (fixed by g_led_config,
-// independent of which side is plugged in as master) — is_keyboard_left()
-// picks the right offset regardless of which physical side is master.
-
-#ifdef RGB_MATRIX_EFFECT_VIALRGB_DIRECT
-static void rgb_direct_sync_handler(uint8_t in_buflen, const void *in_data,
-                                     uint8_t out_buflen, void *out_data) {
-    (void)out_buflen;
-    (void)out_data;
-    if (in_buflen != SYNC_HALF_SIZE * sizeof(HSV) || in_data == NULL) return;
-    uint8_t local_offset = is_keyboard_left() ? 0 : SYNC_HALF_SIZE;
-    memcpy(&g_direct_mode_colors[local_offset], in_data, in_buflen);
-}
-
-void housekeeping_task_user(void) {
-    if (!is_keyboard_master()) return;
-    if (rgb_matrix_get_mode() != RGB_MATRIX_CUSTOM_viz_frame) return;
-
-    static uint32_t last_sync = 0;
-    if (timer_elapsed32(last_sync) < 20) return;
-    last_sync = timer_read32();
-
-    uint8_t remote_offset = is_keyboard_left() ? SYNC_HALF_SIZE : 0;
-    transaction_rpc_send(USER_SYNC_RGB_DIRECT,
-                          SYNC_HALF_SIZE * sizeof(HSV),
-                          &g_direct_mode_colors[remote_offset]);
-}
-#endif
-
 // ─── Public API ──────────────────────────────────────────────────────────────
+// The g_direct_mode_colors relay (viz_frame split-sync + housekeeping) that
+// used to share this file's single _user hook now lives in the
+// kolbenhans/viz_relay module (its own housekeeping_task_viz_relay /
+// keyboard_post_init_viz_relay) — this keymap's engine is unrelated to it
+// and stays untouched.
 
 void keyboard_post_init_user(void) {
     transaction_register_rpc(USER_SYNC_LIGHTS_A,          light_sync_a_handler);
     transaction_register_rpc(USER_SYNC_LIGHTS_B,          light_sync_b_handler);
     transaction_register_rpc(USER_SYNC_LIGHTS_C,          light_sync_c_handler);
     transaction_register_rpc(USER_DYNAMIC_LIGHTS_STARTUP, startup_sync_handler);
-#ifdef RGB_MATRIX_EFFECT_VIALRGB_DIRECT
-    transaction_register_rpc(USER_SYNC_RGB_DIRECT, rgb_direct_sync_handler);
-#endif
-    entry_wave_register_rpc();
     startup_reset();
 }
 

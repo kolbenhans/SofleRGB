@@ -1,6 +1,6 @@
 #include QMK_KEYBOARD_H
 #include "sofle_rgb.h"
-#include "dynamic_lights.h"
+#include "key_colors.h"
 #include "raw_hid.h"
 
 #define KEYBIND_USER01 0x7E01
@@ -31,6 +31,16 @@ enum custom_keycodes {
     KC_NUMPAD,
     KC_AMBIENT,
     KC_GAMING,
+};
+
+// Was pulled in for free via dynamic_lights.h before the module split — now
+// declared here directly, matching how the other keymaps (vial/default) do it.
+enum sofle_layers {
+    _QWERTZ = 0,
+    _RAISE,
+    _NUMPAD,
+    _AMBIENT,
+    _GAMING
 };
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
@@ -93,8 +103,8 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             return false;
         case KEYBIND_USER01:
             if (record->event.pressed) {
-                dynamic_lights_on_mode_enter();
-                rgb_matrix_mode_noeeprom(RGB_MATRIX_CUSTOM_dynamic_lights);
+                key_colors_on_mode_enter();
+                rgb_matrix_mode_noeeprom(RGB_MATRIX_COMMUNITY_MODULE_key_colors);
             }
             return false;
     }

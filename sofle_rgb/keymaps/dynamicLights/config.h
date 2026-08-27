@@ -53,11 +53,20 @@
 
 #define PERMISSIVE_HOLD
 
-#define SPLIT_TRANSACTION_IDS_USER USER_SYNC_LIGHTS_A, USER_SYNC_LIGHTS_B, USER_SYNC_LIGHTS_C, USER_DYNAMIC_LIGHTS_STARTUP, USER_SYNC_RGB_DIRECT, USER_ENTRY_WAVE_STARTUP
+// USER_SYNC_LIGHTS_A/B/C + USER_DYNAMIC_LIGHTS_STARTUP belong to this
+// keymap's own keycode-derived engine (dynamicLights.c), untouched by the
+// module split. VIZ_RELAY_* are the kolbenhans/viz_relay module's RPC IDs —
+// this vial-qmk checkout predates upstream QMK's SPLIT_TRANSACTION_IDS_MODULE_*
+// mechanism, so they're declared here too as an interim shim (the module's
+// own config.h already declares them for forward-compat, but this fork's
+// build system silently ignores it there).
+#define SPLIT_TRANSACTION_IDS_USER \
+    USER_SYNC_LIGHTS_A, USER_SYNC_LIGHTS_B, USER_SYNC_LIGHTS_C, USER_DYNAMIC_LIGHTS_STARTUP, \
+    VIZ_RELAY_SYNC_RGB_DIRECT, VIZ_RELAY_ENTRY_WAVE_STARTUP
 
 // --- keypeek (srwi/keypeek module) ---
 // Its own raw_hid_receive_kb calls raw_hid_receive_user(), which doesn't
 // exist on vial-qmk. Disable it, we chain keypeek_handle_command()
-// from our own raw_hid_receive_kb in entry_wave.c instead.
+// from our own raw_hid_receive_kb in viz_glue.c instead.
 #define KEYPEEK_DISABLE_RAW_HID_HANDLER
 // --- end keypeek ---
