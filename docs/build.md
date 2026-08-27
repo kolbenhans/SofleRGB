@@ -19,15 +19,26 @@ ln -s ~/projects/SofleRGB/sofle_rgb ~/projects/vial-qmk/keyboards/sofle_rgb
 
 Windows without QMK MSYS, use `mklink /D` instead of `ln -s` (needs admin).
 
-## keyColors / dynamicLights / comboRGB keymaps only
+## Community Modules
 
-These report live layer/key state to [KeyPeek](https://github.com/srwi/keypeek) (optional companion desktop app):
+`keyColors` / `dynamicLights` / `comboRGB` all use QMK Community Modules
+instead of vendoring their own lighting code — the modules must exist under
+`vial-qmk/modules/` before compiling, same install step for each:
 
 ```bash
 cd ~/projects/vial-qmk
 git submodule add https://github.com/srwi/qmk-modules.git modules/srwi
-git submodule update --init --recursive -- modules/srwi
+git submodule add https://github.com/kolbenhans/qmk-modules.git modules/kolbenhans
+git submodule update --init --recursive
 ```
+
+| Module | Provides | Used by |
+|---|---|---|
+| `srwi/keypeek_layer_notify` | live layer/key state → [KeyPeek](https://github.com/srwi/keypeek) (optional companion app) | `keyColors`, `dynamicLights`, `comboRGB` |
+| `kolbenhans/key_colors` | WebGUI per-key/per-layer color engine (EEPROM-backed, delta-synced) | `keyColors`, `comboRGB` |
+| `kolbenhans/viz_relay` | entry-wave transition + `g_direct_mode_colors` relay for the Python viz-frame-tools pipeline | `dynamicLights`, `comboRGB` |
+
+`vial` and `default` need none of these.
 
 ## Build
 
@@ -42,4 +53,4 @@ Already in bootloader mode? `qmk flash` instead of `qmk compile` skips the copy 
 
 ## Hardware
 
-RP2040, UF2 bootloader, 72 RGB LEDs total (36/half). Each keymap defines its own `SPLIT_TRANSACTION_IDS_USER` in its own `config.h` — see [Development Notes](development.md).
+RP2040, UF2 bootloader, 72 RGB LEDs total (36/half). Split-sync RPC IDs are now mostly module-owned (`kolbenhans/key_colors`, `kolbenhans/viz_relay`) rather than keymap-level — see [Development Notes](development.md) for the current split and a gotcha with this vial-qmk checkout's version.
