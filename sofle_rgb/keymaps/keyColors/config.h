@@ -51,10 +51,11 @@
 #    define RGB_MATRIX_DEFAULT_MODE RGB_MATRIX_CUSTOM_key_colors
 #endif
 
-// WebGUI-assigned per-key/per-layer colors + lock-state flags, persisted as a
-// keyboard-level EEPROM datablock (key_colors.c: key_colors[8][72] +
-// key_lock_flags[8][72]). 8*72*3 (rgb) + 8*72*1 (flags) = 1728 + 576 = 2304 bytes.
-#define EECONFIG_KB_DATA_SIZE 2304
+// WebGUI-assigned per-key/per-layer colors + blink colors + lock-state flags,
+// persisted as a keyboard-level EEPROM datablock (key_colors.c:
+// key_colors[8][72] + blink_colors[8][72] + key_lock_flags[8][72]).
+// 8*72*3 (rgb) + 8*72*3 (blink rgb) + 8*72*1 (flags) = 1728+1728+576 = 4032 bytes.
+#define EECONFIG_KB_DATA_SIZE 4032
 
 // Default wear-leveling backing (8192B -> 4096B usable) is fully claimed by
 // Vial's own dynamic keymap/combo/tapdance/macro data already; the extra

@@ -164,6 +164,11 @@
     <label><input type="checkbox" id="pp-lock-num"> NumLock</label>
     <label><input type="checkbox" id="pp-lock-caps"> CapsLock</label>
     <label><input type="checkbox" id="pp-lock-scrl"> ScrollLock</label>
+    <label><input type="checkbox" id="pp-lock-blink"> Blink</label>
+  </div>
+  <div class="row hidden" id="pp-blink-row">
+    <input type="color" id="pp-blink-color" value="#ff0000">
+    <input type="text" id="pp-blink-hex" value="#ff0000" maxlength="7" placeholder="#rrggbb">
   </div>
 </div>
 <div id="marquee"></div>
@@ -181,11 +186,14 @@ const COMMIT_COLORS  = 0xA6;
 const GET_KEY_COLORS = 0xA7;
 const SET_LOCK_FLAGS = 0xA8;
 const GET_LOCK_FLAGS = 0xA9;
+const SET_BLINK_COLORS = 0xAA;
+const GET_BLINK_COLORS = 0xAB;
 
-// Lock-state gate bits (müssen zu LOCK_FLAG_* in custom_lightning.h/dynamic_lights.h passen).
-const LOCK_FLAG_NUM  = 1 << 0;
-const LOCK_FLAG_CAPS = 1 << 1;
-const LOCK_FLAG_SCRL = 1 << 2;
+// Lock-state gate bits (müssen zu LOCK_FLAG_* in dynamic_lights.h/key_colors.h passen).
+const LOCK_FLAG_NUM   = 1 << 0;
+const LOCK_FLAG_CAPS  = 1 << 1;
+const LOCK_FLAG_SCRL  = 1 << 2;
+const LOCK_FLAG_BLINK = 1 << 3; // alternates the key between its color and blinkColors every 800ms
 
 const KEY_COLOR_CHUNK  = 9;  // matches KEY_COLOR_CHUNK_MAX in entry_wave.c
 const LOCK_FLAGS_CHUNK = 27; // matches LOCK_FLAGS_CHUNK_MAX in entry_wave.c
@@ -219,8 +227,9 @@ let keyboardName = 'Keyboard';
 
 let device = null;
 let currentLayer = 0;
-let colors = [];    // erst nach dem Verbinden befüllt, sobald LED_COUNT/LAYER_COUNT bekannt sind
-let lockFlags = []; // dito — [layer][led] = Bitmaske aus LOCK_FLAG_*
+let colors = [];      // erst nach dem Verbinden befüllt, sobald LED_COUNT/LAYER_COUNT bekannt sind
+let lockFlags = [];   // dito — [layer][led] = Bitmaske aus LOCK_FLAG_*
+let blinkColors = []; // dito — [layer][led] = zweite Farbe, aktiv bei LOCK_FLAG_BLINK
 let pending = null; // {match, resolve}
 
 // Physische Tasten + Underglow-LEDs, live vom Board geladen (loadLayoutFromDevice).
@@ -249,6 +258,10 @@ const ppFavAddEl  = document.getElementById('pp-fav-add');
 const ppLockNumEl  = document.getElementById('pp-lock-num');
 const ppLockCapsEl = document.getElementById('pp-lock-caps');
 const ppLockScrlEl = document.getElementById('pp-lock-scrl');
+const ppLockBlinkEl  = document.getElementById('pp-lock-blink');
+const ppBlinkRowEl   = document.getElementById('pp-blink-row');
+const ppBlinkColorEl = document.getElementById('pp-blink-color');
+const ppBlinkHexEl   = document.getElementById('pp-blink-hex');
 const ppWheelEl   = document.getElementById('pp-wheel');
 const ppMarkerEl  = document.getElementById('pp-wheel-marker');
 const ppValueEl   = document.getElementById('pp-value');
@@ -609,6 +622,18 @@ async function fetchLayerColors(layer) {
     }
 }
 
+async function fetchLayerBlinkColors(layer) {
+    for (let offset = 0; offset < LED_COUNT; offset += KEY_COLOR_CHUNK) {
+        const count = Math.min(KEY_COLOR_CHUNK, LED_COUNT - offset);
+        await send([0x02, GET_BLINK_COLORS, layer, offset, count]);
+        const d = await waitFor(r => r.getUint8(0) === 0x02 && r.getUint8(1) === GET_BLINK_COLORS && r.getUint8(2) === layer && r.getUint8(3) === offset);
+        for (let i = 0; i < count; i++) {
+            const r = d.getUint8(5 + i * 3), g = d.getUint8(5 + i * 3 + 1), b = d.getUint8(5 + i * 3 + 2);
+            blinkColors[layer][offset + i] = rgbToHex(r, g, b);
+        }
+    }
+}
+
 async function fetchLayerLockFlags(layer) {
     for (let offset = 0; offset < LED_COUNT; offset += LOCK_FLAGS_CHUNK) {
         const count = Math.min(LOCK_FLAGS_CHUNK, LED_COUNT - offset);
@@ -625,6 +650,11 @@ async function sendKeyColor(layer, led, hex) {
 
 async function sendKeyLockFlags(layer, led, flags) {
     await send([0x02, SET_LOCK_FLAGS, layer, led, flags]);
+}
+
+async function sendBlinkColor(layer, led, hex) {
+    const [r, g, b] = hexToRgb(hex);
+    await send([0x02, SET_BLINK_COLORS, layer, led, 1, r, g, b]);
 }
 
 function buildLayerTabs() {
@@ -848,6 +878,11 @@ function syncLockCheckboxes() {
     ppLockNumEl.checked  = !!(flags & LOCK_FLAG_NUM);
     ppLockCapsEl.checked = !!(flags & LOCK_FLAG_CAPS);
     ppLockScrlEl.checked = !!(flags & LOCK_FLAG_SCRL);
+    ppLockBlinkEl.checked = !!(flags & LOCK_FLAG_BLINK);
+    ppBlinkRowEl.classList.toggle('hidden', !ppLockBlinkEl.checked);
+    const blinkHex = firstLed !== undefined ? (blinkColors[currentLayer][firstLed] || '#000000') : '#000000';
+    ppBlinkColorEl.value = blinkHex;
+    ppBlinkHexEl.value = blinkHex;
 }
 
 // Wendet ein einzelnes Lock-Flag-Bit auf ALLE markierten Tasten an (analog
@@ -865,6 +900,28 @@ async function applyLockFlagToSelection(bit, enabled) {
 ppLockNumEl.addEventListener('change', () => applyLockFlagToSelection(LOCK_FLAG_NUM, ppLockNumEl.checked));
 ppLockCapsEl.addEventListener('change', () => applyLockFlagToSelection(LOCK_FLAG_CAPS, ppLockCapsEl.checked));
 ppLockScrlEl.addEventListener('change', () => applyLockFlagToSelection(LOCK_FLAG_SCRL, ppLockScrlEl.checked));
+ppLockBlinkEl.addEventListener('change', () => {
+    ppBlinkRowEl.classList.toggle('hidden', !ppLockBlinkEl.checked);
+    applyLockFlagToSelection(LOCK_FLAG_BLINK, ppLockBlinkEl.checked);
+});
+
+// Sendet die aktuelle Blink-Farbe an alle markierten Tasten — analog zu
+// applyColor()/commitSelected(), aber eigenes (kleineres) Farbfeld ohne
+// Rad/Palette, da nur ein selten genutzter Sekundärwert.
+async function commitBlinkSelected(hex) {
+    for (const led of selected) {
+        blinkColors[currentLayer][led] = hex;
+        try { await sendBlinkColor(currentLayer, led, hex); }
+        catch (err) { setStatus('Send failed: ' + err.message, true); }
+    }
+}
+ppBlinkColorEl.addEventListener('change', () => commitBlinkSelected(ppBlinkColorEl.value));
+ppBlinkHexEl.addEventListener('change', () => {
+    let v = ppBlinkHexEl.value.trim();
+    if (v && !v.startsWith('#')) v = '#' + v;
+    if (/^#[0-9a-fA-F]{6}$/.test(v)) { ppBlinkColorEl.value = v; commitBlinkSelected(v); }
+    else ppBlinkHexEl.value = ppBlinkColorEl.value;
+});
 
 function openPickerAt() {
     syncPickerUI(lastColor);
@@ -967,6 +1024,7 @@ async function selectLayer(layer) {
     setStatus('Loading layer ' + layer + ' …');
     try {
         await fetchLayerColors(layer);
+        await fetchLayerBlinkColors(layer);
         await fetchLayerLockFlags(layer);
         redrawBoard();
         setStatus('Connected — layer ' + layer);
@@ -987,6 +1045,7 @@ async function connect() {
         await loadLayoutFromDevice();
         LAYER_COUNT = await viaGetLayerCount();
         colors = Array.from({length: LAYER_COUNT}, () => new Array(LED_COUNT).fill('#000000'));
+        blinkColors = Array.from({length: LAYER_COUNT}, () => new Array(LED_COUNT).fill('#000000'));
         lockFlags = Array.from({length: LAYER_COUNT}, () => new Array(LED_COUNT).fill(0));
 
         buildLayerTabs();
@@ -1035,12 +1094,13 @@ async function exportConfig() {
         for (let l = 0; l < LAYER_COUNT; l++) {
             setStatus(`Reading layer ${l + 1}/${LAYER_COUNT} for export …`);
             await fetchLayerColors(l);
+            await fetchLayerBlinkColors(l);
             await fetchLayerLockFlags(l);
         }
         const payload = {
             format: 'webgui-key-colors-v1',
             keyboardName, ledCount: LED_COUNT, layerCount: LAYER_COUNT,
-            colors, lockFlags,
+            colors, lockFlags, blinkColors,
         };
         const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
         const url  = URL.createObjectURL(blob);
@@ -1091,6 +1151,12 @@ async function importConfig(file) {
                 const hex = payload.colors[l][led] || '#000000';
                 colors[l][led] = hex;
                 await sendKeyColor(l, led, hex);
+
+                // blinkColors optional — Export-Dateien von vor dem Blink-Feature
+                // haben das Feld nicht, fällt dann auf Schwarz zurück.
+                const blinkHex = (payload.blinkColors && payload.blinkColors[l] && payload.blinkColors[l][led]) || '#000000';
+                blinkColors[l][led] = blinkHex;
+                await sendBlinkColor(l, led, blinkHex);
 
                 const flags = (payload.lockFlags[l] && payload.lockFlags[l][led]) || 0;
                 lockFlags[l][led] = flags;

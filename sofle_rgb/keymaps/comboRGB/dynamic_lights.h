@@ -21,11 +21,20 @@ void dynamic_lights_set_colors(uint8_t layer, uint8_t led_offset, uint8_t count,
 void dynamic_lights_get_colors(uint8_t layer, uint8_t led_offset, uint8_t count, uint8_t *out_rgb_bytes);
 void dynamic_lights_commit_colors(void);
 
+// Second color a LED alternates with while LOCK_FLAG_BLINK is set (WebGUI,
+// Raw HID 0x02/0xAA-0xAB) — persisted/committed alongside the colors above.
+void dynamic_lights_set_blink_colors(uint8_t layer, uint8_t led_offset, uint8_t count, const uint8_t *rgb_bytes);
+void dynamic_lights_get_blink_colors(uint8_t layer, uint8_t led_offset, uint8_t count, uint8_t *out_rgb_bytes);
+
 // Per-key/per-layer lock-state gating (WebGUI, Raw HID 0x02/0xA8-0xA9) — a
 // flagged LED only shows its assigned color while the given lock is active
 // (live host_keyboard_led_state(), independent of keymap/keycode content).
-#define LOCK_FLAG_NUM  (1 << 0)
-#define LOCK_FLAG_CAPS (1 << 1)
-#define LOCK_FLAG_SCRL (1 << 2)
+#define LOCK_FLAG_NUM   (1 << 0)
+#define LOCK_FLAG_CAPS  (1 << 1)
+#define LOCK_FLAG_SCRL  (1 << 2)
+// Alternates the LED between the primary and blink color every 800ms while
+// otherwise visible (composes with the lock flags above: they gate on/off
+// first, this picks which of the two colors shows while "on").
+#define LOCK_FLAG_BLINK (1 << 3)
 void dynamic_lights_set_lock_flags(uint8_t layer, uint8_t led, uint8_t flags);
 void dynamic_lights_get_lock_flags(uint8_t layer, uint8_t led_offset, uint8_t count, uint8_t *out_flags);

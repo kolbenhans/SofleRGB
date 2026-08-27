@@ -27,8 +27,26 @@ extern HSV g_direct_mode_colors[RGB_MATRIX_LED_COUNT];
 typedef struct { uint8_t r, g, b; } rgb_color_t;
 
 static rgb_color_t key_colors[DYNAMIC_KEYMAP_LAYER_COUNT][KEY_LED_COUNT];
+static rgb_color_t blink_colors[DYNAMIC_KEYMAP_LAYER_COUNT][KEY_LED_COUNT];
 static uint8_t      key_lock_flags[DYNAMIC_KEYMAP_LAYER_COUNT][KEY_LED_COUNT];
 static bool         colors_dirty = false;
+
+// Set true whenever any LED on any layer carries LOCK_FLAG_BLINK — gates the
+// 800ms phase-flip check in render_lighting_range() so boards with no blink
+// keys configured never pay the extra cache_rebuild()/send_light_sync() tax.
+static bool any_blink = false;
+
+static void recompute_any_blink(void) {
+    any_blink = false;
+    for (uint8_t layer = 0; layer < DYNAMIC_KEYMAP_LAYER_COUNT && !any_blink; layer++) {
+        for (uint8_t led = 0; led < KEY_LED_COUNT; led++) {
+            if (key_lock_flags[layer][led] & LOCK_FLAG_BLINK) {
+                any_blink = true;
+                break;
+            }
+        }
+    }
+}
 
 #define SYNC_CHUNK_LEDS (KEY_LED_COUNT / 3)
 #define SYNC_CHUNK_SIZE (SYNC_CHUNK_LEDS * sizeof(rgb_color_t))
@@ -45,19 +63,30 @@ static struct {
     rgb_color_t   colors[KEY_LED_COUNT];
     layer_state_t layer_state;
     uint8_t       led_state_raw; // host_keyboard_led_state().raw — für Lock-Flag-Gating
+    uint8_t       blink_phase;   // (timer_read32()/800)%2 as of last rebuild
     bool          valid;
 } cache;
+
+// Stateless — recomputed on demand, no stored animation timer. 800ms/phase =
+// 1.6s full cycle, same cadence as the legacy dynamicLights keymap's
+// slow_blink_pick().
+static rgb_color_t slow_blink_pick(rgb_color_t a, rgb_color_t b) {
+    return (timer_read32() / 800) % 2 ? a : b;
+}
 
 // ─── Host API ─────────────────────────────────────────────────────────────────
 
 static void load_colors(void) {
     if (eeconfig_is_kb_datablock_valid()) {
         eeconfig_read_kb_datablock(key_colors, 0, sizeof(key_colors));
-        eeconfig_read_kb_datablock(key_lock_flags, sizeof(key_colors), sizeof(key_lock_flags));
+        eeconfig_read_kb_datablock(blink_colors, sizeof(key_colors), sizeof(blink_colors));
+        eeconfig_read_kb_datablock(key_lock_flags, sizeof(key_colors) + sizeof(blink_colors), sizeof(key_lock_flags));
     } else {
         memset(key_colors, 0, sizeof(key_colors));
+        memset(blink_colors, 0, sizeof(blink_colors));
         memset(key_lock_flags, 0, sizeof(key_lock_flags));
     }
+    recompute_any_blink();
 }
 
 void dynamic_lights_set_colors(uint8_t layer, uint8_t led_offset, uint8_t count, const uint8_t *rgb_bytes) {
@@ -82,15 +111,39 @@ void dynamic_lights_get_colors(uint8_t layer, uint8_t led_offset, uint8_t count,
     }
 }
 
+void dynamic_lights_set_blink_colors(uint8_t layer, uint8_t led_offset, uint8_t count, const uint8_t *rgb_bytes) {
+    if (layer >= DYNAMIC_KEYMAP_LAYER_COUNT) return;
+    for (uint8_t i = 0; i < count && (uint16_t)led_offset + i < KEY_LED_COUNT; i++) {
+        rgb_color_t *c = &blink_colors[layer][led_offset + i];
+        c->r = rgb_bytes[i * 3 + 0];
+        c->g = rgb_bytes[i * 3 + 1];
+        c->b = rgb_bytes[i * 3 + 2];
+    }
+    colors_dirty = true;
+}
+
+void dynamic_lights_get_blink_colors(uint8_t layer, uint8_t led_offset, uint8_t count, uint8_t *out_rgb_bytes) {
+    memset(out_rgb_bytes, 0, (size_t)count * 3);
+    if (layer >= DYNAMIC_KEYMAP_LAYER_COUNT) return;
+    for (uint8_t i = 0; i < count && (uint16_t)led_offset + i < KEY_LED_COUNT; i++) {
+        rgb_color_t c              = blink_colors[layer][led_offset + i];
+        out_rgb_bytes[i * 3 + 0]   = c.r;
+        out_rgb_bytes[i * 3 + 1]   = c.g;
+        out_rgb_bytes[i * 3 + 2]   = c.b;
+    }
+}
+
 void dynamic_lights_commit_colors(void) {
     eeconfig_update_kb_datablock(key_colors, 0, sizeof(key_colors));
-    eeconfig_update_kb_datablock(key_lock_flags, sizeof(key_colors), sizeof(key_lock_flags));
+    eeconfig_update_kb_datablock(blink_colors, sizeof(key_colors), sizeof(blink_colors));
+    eeconfig_update_kb_datablock(key_lock_flags, sizeof(key_colors) + sizeof(blink_colors), sizeof(key_lock_flags));
 }
 
 void dynamic_lights_set_lock_flags(uint8_t layer, uint8_t led, uint8_t flags) {
     if (layer >= DYNAMIC_KEYMAP_LAYER_COUNT || led >= KEY_LED_COUNT) return;
     key_lock_flags[layer][led] = flags;
     colors_dirty = true;
+    recompute_any_blink();
 }
 
 void dynamic_lights_get_lock_flags(uint8_t layer, uint8_t led_offset, uint8_t count, uint8_t *out_flags) {
@@ -154,11 +207,18 @@ static void cache_rebuild(void) {
         bool    visible = !(((flags & LOCK_FLAG_NUM)  && !led_state.num_lock) ||
                              ((flags & LOCK_FLAG_CAPS) && !led_state.caps_lock) ||
                              ((flags & LOCK_FLAG_SCRL) && !led_state.scroll_lock));
-        cache.colors[led] = visible ? key_colors[layer][led] : (rgb_color_t){0, 0, 0};
+        if (!visible) {
+            cache.colors[led] = (rgb_color_t){0, 0, 0};
+        } else if (flags & LOCK_FLAG_BLINK) {
+            cache.colors[led] = slow_blink_pick(key_colors[layer][led], blink_colors[layer][led]);
+        } else {
+            cache.colors[led] = key_colors[layer][led];
+        }
     }
 
     cache.layer_state   = layer_state;
     cache.led_state_raw = led_state.raw;
+    cache.blink_phase   = (timer_read32() / 800) % 2;
     cache.valid          = true;
 }
 
@@ -188,7 +248,8 @@ static void render_lighting_range(uint8_t led_min, uint8_t led_max) {
     }
 
     bool content_stale = !cache.valid || cache.layer_state != layer_state || colors_dirty ||
-                          cache.led_state_raw != host_keyboard_led_state().raw;
+                          cache.led_state_raw != host_keyboard_led_state().raw ||
+                          (any_blink && ((timer_read32() / 800) % 2 != cache.blink_phase));
 
     if (content_stale) {
         cache_rebuild();

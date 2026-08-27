@@ -68,6 +68,22 @@ static void handle_get_key_colors(const uint8_t *req) {
     host_raw_hid_send(resp, sizeof(resp));
 }
 
+static void handle_get_blink_colors(const uint8_t *req) {
+    uint8_t layer      = req[2];
+    uint8_t led_offset = req[3];
+    uint8_t count      = req[4];
+    if (count > KEY_COLOR_CHUNK_MAX) count = KEY_COLOR_CHUNK_MAX;
+
+    uint8_t resp[32] = {0};
+    resp[0] = 0x02;
+    resp[1] = 0xAB;
+    resp[2] = layer;
+    resp[3] = led_offset;
+    resp[4] = count;
+    dynamic_lights_get_blink_colors(layer, led_offset, count, &resp[5]);
+    host_raw_hid_send(resp, sizeof(resp));
+}
+
 // Lock-flags chunk size — 1 byte per LED, same 32-byte report.
 #define LOCK_FLAGS_CHUNK_MAX 27
 
@@ -142,6 +158,20 @@ void raw_hid_receive_kb(uint8_t *data, uint8_t length) {
         case 0xA9: // GET_KEY_LOCK_FLAGS_CHUNK: layer, led_offset, count
             if (length < 5) return;
             handle_get_lock_flags(data);
+            break;
+
+        case 0xAA: { // SET_BLINK_COLORS_CHUNK: layer, led_offset, count, (r,g,b)×count
+            if (length < 5) return;
+            uint8_t count = data[4];
+            if (count > KEY_COLOR_CHUNK_MAX) count = KEY_COLOR_CHUNK_MAX;
+            if (length < (uint16_t)5 + (uint16_t)count * 3) return;
+            dynamic_lights_set_blink_colors(data[2], data[3], count, &data[5]);
+            break;
+        }
+
+        case 0xAB: // GET_BLINK_COLORS_CHUNK: layer, led_offset, count
+            if (length < 5) return;
+            handle_get_blink_colors(data);
             break;
     }
 }
