@@ -3,4 +3,4 @@
 	url = https://github.com/kolbenhans/viz-frame-tools
 [submodule "webgui"]
 	path = webgui
-	url = /home/sticky/Projects/qmk-webgui
+	url = https://github.com/kolbenhans/qmk-webgui.git
