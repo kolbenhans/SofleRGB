@@ -35,7 +35,7 @@ USER_SYNC_LIGHTS_A/B/C       // color IDs, 24 each
 USER_DYNAMIC_LIGHTS_STARTUP  // startup comet trigger
 ```
 
-`kolbenhans/key_colors` module (used by `keyColors`/`comboRGB`) — **delta-sync**, not a full-cache broadcast: each color/blink/lock-flag change forwards just that one small host-sized chunk to the other half, which applies it directly to its own tables and resolves its own render cache (needs `SPLIT_LED_STATE_ENABLE`, so lock-gated LEDs read correct state on both halves):
+`kolbenhans/key_colors` module (used by `keyColors`/`comboRGB`) — **delta-sync**, not a full-cache broadcast: each color/blink/lock-flag change forwards just that one small host-sized chunk to the other half, which applies it directly to its own tables and resolves its own render cache. Needs both `SPLIT_LED_STATE_ENABLE` (lock-gated LEDs read correct state on both halves) and `SPLIT_LAYER_STATE_ENABLE` (found the hard way: without it, the non-master half's `layer_state` never updates past boot, so it renders layer 0's colors forever no matter what layer is actually active — colors themselves synced fine, only the layer lookup was wrong). Both are set in the module's own `config.h`, no keymap action needed:
 ```c
 KEY_COLORS_COLORS_DELTA       // one SET_KEY_COLORS_CHUNK, mirrored
 KEY_COLORS_BLINK_DELTA        // one SET_BLINK_COLORS_CHUNK, mirrored
