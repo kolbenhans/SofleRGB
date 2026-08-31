@@ -1,4 +1,5 @@
-SRC += rgb_glue.c    # keymap-level Raw HID glue for key_colors + viz_relay modules
+SRC += key_colors_hid.c        # keymap-level Raw HID glue for the kolbenhans/key_colors module
+SRC += audio_visualizer_hid.c  # keymap-level Raw HID glue for the kolbenhans/audio_visualizer module
 
 # Vial-Features
 COMBO_ENABLE = yes          # Enable key combinations (Chords) for special actions

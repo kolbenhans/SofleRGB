@@ -1,6 +1,0 @@
-{
-  "modules": [
-    "srwi/keypeek_layer_notify",
-    "kolbenhans/viz_relay"
-  ]
-}

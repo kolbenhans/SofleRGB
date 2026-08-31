@@ -7,7 +7,22 @@
 // its internals directly.
 #include QMK_KEYBOARD_H
 #include "key_colors.h"
-#include "keypeek_layer_notify.h" // keypeek
+
+// keypeek: optional, not a key_colors dependency — auto-detected only if the
+// keymap also lists srwi/keypeek_layer_notify in keymap.json.
+#if __has_include("keypeek_layer_notify.h")
+#    include "keypeek_layer_notify.h"
+#    define KEY_COLORS_HAS_KEYPEEK
+#endif
+
+// audio_visualizer: same idea — auto-detected if the keymap also lists
+// kolbenhans/audio_visualizer. We own raw_hid_receive_kb when both are
+// present (audio_visualizer/config.h steps aside, see
+// AUDIO_VISUALIZER_DISABLE_RAW_HID_HANDLER), just forward its commands to it.
+#if __has_include("audio_visualizer.h")
+#    define KEY_COLORS_HAS_AUDIO_VISUALIZER
+extern bool audio_visualizer_hid_handle_command(uint8_t *data, uint8_t length);
+#endif
 
 #ifdef RAW_ENABLE
 
@@ -66,15 +81,25 @@ static void handle_get_lock_flags(const uint8_t *req) {
     host_raw_hid_send(resp, sizeof(resp));
 }
 
-// WebGUI key-color/lock-flag/blink-color commands (0xA5-0xAB), sent via WebHID.
+// Mode-switch (0xA4) and WebGUI key-color/lock-flag/blink-color commands
+// (0xA5-0xAB), sent via WebHID.
 void raw_hid_receive_kb(uint8_t *data, uint8_t length) {
-    // --- keypeek: claims its own subscribe/keepalive packets, ignores everything else ---
+#ifdef KEY_COLORS_HAS_KEYPEEK
+    // keypeek claims its own subscribe/keepalive packets, ignores everything else
     if (keypeek_handle_command(data, length)) return;
-    // --- end keypeek ---
+#endif
+#ifdef KEY_COLORS_HAS_AUDIO_VISUALIZER
+    if (audio_visualizer_hid_handle_command(data, length)) return;
+#endif
 
     if (length < 2 || data[0] != 0x02) return;
 
     switch (data[1]) {
+        case 0xA4: // ACTIVATE_KEY_COLORS: switch into key_colors mode
+            key_colors_on_mode_enter();
+            rgb_matrix_mode_noeeprom(RGB_MATRIX_COMMUNITY_MODULE_key_colors);
+            break;
+
         case 0xA5: { // SET_KEY_COLORS_CHUNK: layer, led_offset, count, (r,g,b)×count
             if (length < 5) return;
             uint8_t count = data[4];

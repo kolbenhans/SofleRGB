@@ -1,21 +1,18 @@
 # SofleRGB
 
-Vial-QMK firmware for the Sofle RGB — four keymaps, pick one, build it, flash it.
+Vial-QMK firmware for the Sofle RGB — three keymaps, pick one, build it, flash it.
 
-Don't want to build it yourself? Prebuilt `.uf2` files for every keymap are in [`firmware/`](firmware/) — skip straight to [Flashing](docs/flashing.md).
+Don't want to build it yourself? Prebuilt `.uf2` files are in [`firmware/`](firmware/) — skip to [Flashing](docs/flashing.md).
 
 ## Which keymap?
 
 | Keymap | What it is |
 |---|---|
 | `vial` | Stock Vial, no custom lighting |
-| `keycolors` | same webgui colors, no visualizer/python — leanest |
-| `comboRGB` | Pick your own key colors via [browser WebGUI](docs/webgui-usage.md) + audio visualizer |
-| `dynamicLights` | Keys auto-color by function, no setup. Includes [audio visualizer](docs/viz_frame.md) |
+| `keyColors` | Pick your own key colors via [browser WebGUI](docs/webgui-usage.md) |
+| `comboRGB` | Same, plus [audio visualizer](docs/audio-visualizer.md) |
 
-unsure? `keycolors` for just picking colors. `comborgb` if you also want the visualizer.
-
-## quick start
+## Quick start
 
 ```bash
 git clone --depth 1 https://github.com/vial-kb/vial-qmk ~/projects/vial-qmk
@@ -27,28 +24,17 @@ git clone --recursive https://github.com/kolbenhans/soflergb.git ~/projects/sofl
 ln -s ~/projects/soflergb/sofle_rgb ~/projects/vial-qmk/keyboards/sofle_rgb
 
 cd ~/projects/vial-qmk
-qmk compile -kb sofle_rgb -km keycolors   # or: vial, dynamiclights, comborgb
+qmk compile -kb sofle_rgb -km keyColors   # or: vial, comboRGB
 ```
 
-copy `.build/sofle_rgb_<keymap>.uf2` onto the keyboard's uf2 drive — **both halves separately**. details: [build guide](docs/build.md), [flashing guide](docs/flashing.md).
+Copy `.build/sofle_rgb_<keymap>.uf2` onto the keyboard's UF2 drive — **both halves separately**. Details: [Build Guide](docs/build.md), [Flashing Guide](docs/flashing.md).
 
-**`keycolors` / `dynamiclights` / `comborgb`**: the lighting effect is default at boot, but custom effects don't show up in Vial's effect list — if it ever switches off (another effect picked, EEPROM not fresh), bind `User 1` to a key in Vial (**User** tab → drag onto a key) to bring it back.
+`keyColors`/`comboRGB` need modules — see [kolbenhans/qmk-modules](https://github.com/kolbenhans/qmk-modules).
 
-**`keycolors` / `dynamiclights` / `comborgb`**, one extra step — these three also report live layer/key state to [KeyPeek](https://github.com/srwi/keypeek) (a separate desktop app, optional):
-```bash
-cd ~/projects/vial-qmk
-git submodule add https://github.com/srwi/qmk-modules.git modules/srwi
-git submodule update --init --recursive -- modules/srwi
-```
-
-**`comborgb` / `keycolors`**: open **https://webgui.212-227-193-242.sslip.io/** in chrome/edge, connect, click keys, pick colors, save. no install needed. run it locally instead: [webgui usage](docs/webgui-usage.md).
-
-## contents
+## Contents
 
 - `sofle_rgb/` — keyboard source
-- `webgui/` — browser color picker (`comborgb`/`keycolors`)
-- `python/` — audio visualizer gui (`dynamiclights`/`comborgb`)
 
-## docs
+## Docs
 
-[build](docs/build.md) · [flashing](docs/flashing.md) · [development](docs/development.md) · [audio visualizer](docs/viz_frame.md) · [webgui usage](docs/webgui-usage.md)
+[Build](docs/build.md) · [Flashing](docs/flashing.md) · [Audio Visualizer](docs/audio-visualizer.md) · [WebGUI Usage](docs/webgui-usage.md)

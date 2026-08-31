@@ -51,13 +51,8 @@
 #    define RGB_MATRIX_DEFAULT_MODE RGB_MATRIX_COMMUNITY_MODULE_key_colors
 #endif
 
-// WebGUI-assigned per-key/per-layer colors + blink colors + lock-state flags,
-// persisted as a keyboard-level EEPROM datablock (kolbenhans/key_colors module:
-// key_colors[8][72] + blink_colors[8][72] + key_lock_flags[8][72]).
-// 8*72*3 (rgb) + 8*72*3 (blink rgb) + 8*72*1 (flags) = 1728+1728+576 = 4032 bytes.
-// Kept here (not in the module) since it depends on this keymap's
-// DYNAMIC_KEYMAP_LAYER_COUNT and this board's Vial EEPROM budget.
-#define EECONFIG_KB_DATA_SIZE 4032
+// EECONFIG_KB_DATA_SIZE now sized automatically by key_colors/config.h
+// (qmk-modules) from DYNAMIC_KEYMAP_LAYER_COUNT * RGB_MATRIX_LED_COUNT * 7.
 
 // Default wear-leveling backing (8192B -> 4096B usable) is fully claimed by
 // Vial's own dynamic keymap/combo/tapdance/macro data already; the extra
@@ -77,9 +72,5 @@
     KEY_COLORS_COLORS_DELTA, KEY_COLORS_BLINK_DELTA, KEY_COLORS_LOCK_FLAGS_DELTA, \
     KEY_COLORS_COMMIT, KEY_COLORS_STARTUP
 
-// --- keypeek (srwi/keypeek module) ---
-// Its own raw_hid_receive_kb calls raw_hid_receive_user(), which doesn't
-// exist on vial-qmk. Disable it, we chain keypeek_handle_command()
-// from our own raw_hid_receive_kb in key_colors_hid.c instead.
-#define KEYPEEK_DISABLE_RAW_HID_HANDLER
-// --- end keypeek ---
+// keypeek disable-own-raw_hid_receive_kb handshake now lives in
+// key_colors/config.h (qmk-modules) — no manual define needed here anymore.

@@ -1,6 +1,0 @@
-[submodule "python"]
-	path = python
-	url = https://github.com/kolbenhans/viz-frame-tools
-[submodule "webgui"]
-	path = webgui
-	url = https://github.com/kolbenhans/qmk-webgui.git

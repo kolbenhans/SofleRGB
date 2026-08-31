@@ -2,6 +2,6 @@
   "modules": [
     "srwi/keypeek_layer_notify",
     "kolbenhans/key_colors",
-    "kolbenhans/viz_relay"
+    "kolbenhans/audio_visualizer"
   ]
 }
