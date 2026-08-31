@@ -2,12 +2,7 @@
 
 ## Linux: USB permissions
 
-```bash
-sudo cp ~/projects/vial-qmk/util/udev/50-qmk.rules /etc/udev/rules.d/
-echo 'KERNEL=="hidraw*", ATTRS{idVendor}=="fc32", ATTRS{idProduct}=="0287", MODE="0666"' | sudo tee /etc/udev/rules.d/99-sofle-rgb.rules
-sudo udevadm control --reload-rules && sudo udevadm trigger
-```
-Reconnect the keyboard after.
+See [QMK's udev rules guide](https://docs.qmk.fm/faq_build#linux-udev-rules).
 
 ## Build & flash
 
