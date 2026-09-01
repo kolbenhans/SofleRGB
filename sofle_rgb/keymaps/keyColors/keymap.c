@@ -33,6 +33,16 @@ enum custom_keycodes {
     KC_GAMING,
 };
 
+// Was pulled in for free via key_colors.h before the module split — now
+// declared here directly, matching how the other keymaps (vial/default) do it.
+enum sofle_layers {
+    _QWERTZ = 0,
+    _RAISE,
+    _NUMPAD,
+    _AMBIENT,
+    _GAMING
+};
+
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     [_QWERTZ] = LAYOUT(KC_ESC, KC_1, KC_2, KC_3, KC_4, KC_5, KC_6, KC_7, KC_8, KC_9, KC_0, KC_MINS, KC_TAB, KC_Q, KC_W, KC_E, KC_R, KC_T, KC_Y, KC_U, KC_I, KC_O, KC_P, KC_LBRC, MO(3), LGUI_T(KC_A), LALT_T(KC_S), LCTL_T(KC_D), LSFT_T(KC_F), KC_G, KC_H, RSFT_T(KC_J), RCTL_T(KC_K), RALT_T(KC_L), RGUI_T(KC_SCLN), KC_QUOT, KC_NUBS, KC_Z, KC_X, KC_C, KC_V, KC_B, KC_MUTE, KC_NO, KC_N, KC_M, KC_COMM, KC_DOT, KC_SLSH, RALT(KC_NUBS), KC_NO, KC_LGUI, MO(2), MO(1), KC_SPC, KC_ENT, KC_BSPC, KC_DEL, KC_NO, TG(4)),
     [_RAISE] = LAYOUT(KC_ESC, KC_F1, KC_F2, KC_F3, KC_F4, KC_F5, KC_F6, KC_F7, KC_F8, KC_F9, KC_F10, KC_F11, KC_TAB, KC_GRV, KC_NO, LGUI(KC_LCTL), KC_NO, KC_NO, KC_HOME, KC_PGDN, KC_PGUP, KC_END, RALT(KC_MINS), KC_F12, RALT(KC_7), LGUI(KC_SLSH), LGUI(KC_N), LCTL(LSFT(KC_LGUI)), LGUI(KC_LSFT), LCTL(LSFT(KC_TAB)), KC_LEFT, KC_DOWN, KC_UP, KC_RGHT, LSFT(KC_8), RALT(KC_8), RALT(KC_0), RALT(KC_NUBS), RSFT(KC_RBRC), LSFT(KC_EQL), KC_EQL, LCTL(KC_TAB), KC_TRNS, KC_TRNS, KC_NUBS, LCTL(KC_LEFT), LCTL(KC_RGHT), LSFT(KC_NUBS), LSFT(KC_9), RALT(KC_9), KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_LGUI, KC_TRNS, KC_TRNS, KC_NO),
@@ -94,7 +104,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         case KEYBIND_USER01:
             if (record->event.pressed) {
                 key_colors_on_mode_enter();
-                rgb_matrix_mode_noeeprom(RGB_MATRIX_CUSTOM_key_colors);
+                rgb_matrix_mode_noeeprom(RGB_MATRIX_COMMUNITY_MODULE_key_colors);
             }
             return false;
     }

@@ -48,14 +48,11 @@
 #define OLED_EFFECT_LUNABONGO
 
 #ifdef RGB_MATRIX_ENABLE
-#    define RGB_MATRIX_DEFAULT_MODE RGB_MATRIX_CUSTOM_key_colors
+#    define RGB_MATRIX_DEFAULT_MODE RGB_MATRIX_COMMUNITY_MODULE_key_colors
 #endif
 
-// WebGUI-assigned per-key/per-layer colors + blink colors + lock-state flags,
-// persisted as a keyboard-level EEPROM datablock (key_colors.c:
-// key_colors[8][72] + blink_colors[8][72] + key_lock_flags[8][72]).
-// 8*72*3 (rgb) + 8*72*3 (blink rgb) + 8*72*1 (flags) = 1728+1728+576 = 4032 bytes.
-#define EECONFIG_KB_DATA_SIZE 4032
+// EECONFIG_KB_DATA_SIZE now sized automatically by key_colors/config.h
+// (qmk-modules) from DYNAMIC_KEYMAP_LAYER_COUNT * RGB_MATRIX_LED_COUNT * 7.
 
 // Default wear-leveling backing (8192B -> 4096B usable) is fully claimed by
 // Vial's own dynamic keymap/combo/tapdance/macro data already; the extra
@@ -65,11 +62,15 @@
 
 #define PERMISSIVE_HOLD
 
-#define SPLIT_TRANSACTION_IDS_USER USER_SYNC_LIGHTS_A, USER_SYNC_LIGHTS_B, USER_SYNC_LIGHTS_C, USER_KEY_COLORS_STARTUP
+// This vial-qmk checkout predates upstream QMK's SPLIT_TRANSACTION_IDS_MODULE_*
+// mechanism (module-owned split transaction IDs) — the kolbenhans/key_colors
+// module's own config.h already declares SPLIT_TRANSACTION_IDS_MODULE_KEY_COLORS
+// for forward-compat, but this fork's build system silently ignores it. Interim
+// shim until vial-qmk catches up: declare the same identifiers here too, the
+// module's .c only needs the names to exist as enum constants somewhere.
+#define SPLIT_TRANSACTION_IDS_USER \
+    KEY_COLORS_COLORS_DELTA, KEY_COLORS_BLINK_DELTA, KEY_COLORS_LOCK_FLAGS_DELTA, \
+    KEY_COLORS_COMMIT, KEY_COLORS_STARTUP
 
-// --- keypeek (srwi/keypeek module) ---
-// Its own raw_hid_receive_kb calls raw_hid_receive_user(), which doesn't
-// exist on vial-qmk. Disable it, we chain keypeek_handle_command()
-// from our own raw_hid_receive_kb in key_colors.c instead.
-#define KEYPEEK_DISABLE_RAW_HID_HANDLER
-// --- end keypeek ---
+// keypeek disable-own-raw_hid_receive_kb handshake now lives in
+// key_colors/config.h (qmk-modules) — no manual define needed here anymore.

@@ -1,52 +1,30 @@
-#include "entry_wave.h"
-#include "dynamic_lights.h"
-#include "transactions.h"
-#include "keypeek_layer_notify.h" // keypeek
+// Keymap-level Raw HID glue for the kolbenhans/key_colors module.
+//
+// Community modules cannot hook raw_hid_receive_kb (not in QMK's
+// module-hookable API list) — the wire protocol (opcode numbers, 32-byte
+// chunk framing) is a keymap/board concern, so it lives here and calls into
+// the module's public API (key_colors_set_colors() etc.) instead of touching
+// its internals directly.
+#include QMK_KEYBOARD_H
+#include "key_colors.h"
+
+// keypeek: optional, not a key_colors dependency — auto-detected only if the
+// keymap also lists srwi/keypeek_layer_notify in keymap.json.
+#if __has_include("keypeek_layer_notify.h")
+#    include "keypeek_layer_notify.h"
+#    define KEY_COLORS_HAS_KEYPEEK
+#endif
+
+// audio_visualizer: same idea — auto-detected if the keymap also lists
+// kolbenhans/audio_visualizer. We own raw_hid_receive_kb when both are
+// present (audio_visualizer/config.h steps aside, see
+// AUDIO_VISUALIZER_DISABLE_RAW_HID_HANDLER), just forward its commands to it.
+#if __has_include("audio_visualizer.h")
+#    define KEY_COLORS_HAS_AUDIO_VISUALIZER
+extern bool audio_visualizer_hid_handle_command(uint8_t *data, uint8_t length);
+#endif
 
 #ifdef RAW_ENABLE
-
-static bool     entry_wave_active = false;
-static uint32_t entry_wave_timer  = 0;
-
-void entry_wave_start(void) {
-    entry_wave_active = true;
-    entry_wave_timer  = timer_read32();
-}
-
-bool entry_wave_running(void) {
-    return entry_wave_active;
-}
-
-uint32_t entry_wave_elapsed(void) {
-    return timer_elapsed32(entry_wave_timer);
-}
-
-void entry_wave_stop(void) {
-    entry_wave_active = false;
-}
-
-static void entry_wave_sync_handler(uint8_t in_buflen, const void *in_data,
-                                     uint8_t out_buflen, void *out_data) {
-    (void)in_buflen;
-    (void)in_data;
-    (void)out_buflen;
-    (void)out_data;
-    entry_wave_start();
-}
-
-void entry_wave_register_rpc(void) {
-    transaction_register_rpc(USER_ENTRY_WAVE_STARTUP, entry_wave_sync_handler);
-}
-
-// Starts the wave locally and pushes it to the other half too — a plain
-// entry_wave_start() only fires where it's called, which is always the
-// master (raw HID / key events never reach the slave directly).
-void entry_wave_trigger(void) {
-    entry_wave_start();
-    if (is_keyboard_master()) {
-        transaction_rpc_send(USER_ENTRY_WAVE_STARTUP, 0, NULL);
-    }
-}
 
 // WebGUI key-color chunk size — bounded by the 32-byte raw HID report minus
 // the 5-byte header (family, subcmd, layer, led_offset, count).
@@ -64,7 +42,7 @@ static void handle_get_key_colors(const uint8_t *req) {
     resp[2] = layer;
     resp[3] = led_offset;
     resp[4] = count;
-    dynamic_lights_get_colors(layer, led_offset, count, &resp[5]);
+    key_colors_get_colors(layer, led_offset, count, &resp[5]);
     host_raw_hid_send(resp, sizeof(resp));
 }
 
@@ -80,7 +58,7 @@ static void handle_get_blink_colors(const uint8_t *req) {
     resp[2] = layer;
     resp[3] = led_offset;
     resp[4] = count;
-    dynamic_lights_get_blink_colors(layer, led_offset, count, &resp[5]);
+    key_colors_get_blink_colors(layer, led_offset, count, &resp[5]);
     host_raw_hid_send(resp, sizeof(resp));
 }
 
@@ -99,28 +77,27 @@ static void handle_get_lock_flags(const uint8_t *req) {
     resp[2] = layer;
     resp[3] = led_offset;
     resp[4] = count;
-    dynamic_lights_get_lock_flags(layer, led_offset, count, &resp[5]);
+    key_colors_get_lock_flags(layer, led_offset, count, &resp[5]);
     host_raw_hid_send(resp, sizeof(resp));
 }
 
-// Mode-switch and WebGUI key-color/lock-flag commands. 0xA3/0xA4 come from
-// the Python viz tool (viz_hid.py); 0xA5-0xA9 come from the browser WebGUI (WebHID).
+// Mode-switch (0xA4) and WebGUI key-color/lock-flag/blink-color commands
+// (0xA5-0xAB), sent via WebHID.
 void raw_hid_receive_kb(uint8_t *data, uint8_t length) {
-    // --- keypeek: claims its own subscribe/keepalive packets, ignores everything else ---
+#ifdef KEY_COLORS_HAS_KEYPEEK
+    // keypeek claims its own subscribe/keepalive packets, ignores everything else
     if (keypeek_handle_command(data, length)) return;
-    // --- end keypeek ---
+#endif
+#ifdef KEY_COLORS_HAS_AUDIO_VISUALIZER
+    if (audio_visualizer_hid_handle_command(data, length)) return;
+#endif
 
     if (length < 2 || data[0] != 0x02) return;
 
     switch (data[1]) {
-        case 0xA3:
-            entry_wave_trigger();
-            rgb_matrix_mode_noeeprom(RGB_MATRIX_CUSTOM_viz_frame);
-            break;
-
-        case 0xA4:
-            dynamic_lights_on_mode_enter();
-            rgb_matrix_mode_noeeprom(RGB_MATRIX_CUSTOM_dynamic_lights);
+        case 0xA4: // ACTIVATE_KEY_COLORS: switch into key_colors mode
+            key_colors_on_mode_enter();
+            rgb_matrix_mode_noeeprom(RGB_MATRIX_COMMUNITY_MODULE_key_colors);
             break;
 
         case 0xA5: { // SET_KEY_COLORS_CHUNK: layer, led_offset, count, (r,g,b)×count
@@ -128,12 +105,12 @@ void raw_hid_receive_kb(uint8_t *data, uint8_t length) {
             uint8_t count = data[4];
             if (count > KEY_COLOR_CHUNK_MAX) count = KEY_COLOR_CHUNK_MAX;
             if (length < (uint16_t)5 + (uint16_t)count * 3) return;
-            dynamic_lights_set_colors(data[2], data[3], count, &data[5]);
+            key_colors_set_colors(data[2], data[3], count, &data[5]);
             break;
         }
 
         case 0xA6: { // COMMIT_KEY_COLORS: persist current table to EEPROM
-            dynamic_lights_commit_colors();
+            key_colors_commit_colors();
             // Ack sent only after the flash write actually completes — the
             // host previously took "HID report sent" as "safe to reboot",
             // but that's just USB transfer done, not flash-write-done. A
@@ -152,7 +129,7 @@ void raw_hid_receive_kb(uint8_t *data, uint8_t length) {
 
         case 0xA8: // SET_KEY_LOCK_FLAGS: layer, led, flags
             if (length < 5) return;
-            dynamic_lights_set_lock_flags(data[2], data[3], data[4]);
+            key_colors_set_lock_flags(data[2], data[3], data[4]);
             break;
 
         case 0xA9: // GET_KEY_LOCK_FLAGS_CHUNK: layer, led_offset, count
@@ -165,7 +142,7 @@ void raw_hid_receive_kb(uint8_t *data, uint8_t length) {
             uint8_t count = data[4];
             if (count > KEY_COLOR_CHUNK_MAX) count = KEY_COLOR_CHUNK_MAX;
             if (length < (uint16_t)5 + (uint16_t)count * 3) return;
-            dynamic_lights_set_blink_colors(data[2], data[3], count, &data[5]);
+            key_colors_set_blink_colors(data[2], data[3], count, &data[5]);
             break;
         }
 
@@ -176,14 +153,4 @@ void raw_hid_receive_kb(uint8_t *data, uint8_t length) {
     }
 }
 
-#else
-
-bool     entry_wave_running(void)      { return false; }
-uint32_t entry_wave_elapsed(void)      { return 0; }
-void     entry_wave_stop(void)         {}
-void     entry_wave_start(void)        {}
-void     entry_wave_trigger(void)      {}
-void     entry_wave_register_rpc(void) {}
-void     raw_hid_receive_kb(uint8_t *data, uint8_t length) { (void)data; (void)length; }
-
-#endif
+#endif // RAW_ENABLE

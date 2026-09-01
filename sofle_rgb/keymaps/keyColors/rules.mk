@@ -1,4 +1,4 @@
-SRC += key_colors.c    # WebGUI-driven per-key/per-layer colors + Raw HID dispatch
+SRC += key_colors_hid.c    # keymap-level Raw HID glue for the kolbenhans/key_colors module
 
 # Vial-Features
 COMBO_ENABLE = yes          # Enable key combinations (Chords) for special actions
@@ -14,5 +14,4 @@ OS_DETECTION_ENABLE = yes   # Detect the connected OS (Win/Mac/Linux) for OLED/K
 # Debug
 CONSOLE_ENABLE = no
 
-RGB_MATRIX_CUSTOM_USER = yes
 RAW_ENABLE = yes

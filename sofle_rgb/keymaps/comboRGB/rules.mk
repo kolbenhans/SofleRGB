@@ -1,5 +1,5 @@
-SRC += dynamic_lights.c    # Include the custom lightning logic into the build
-SRC += entry_wave.c          # Entry-wave transition animation + Python mode-switch dispatch
+SRC += key_colors_hid.c        # keymap-level Raw HID glue for the kolbenhans/key_colors module
+SRC += audio_visualizer_hid.c  # keymap-level Raw HID glue for the kolbenhans/audio_visualizer module
 
 # Vial-Features
 COMBO_ENABLE = yes          # Enable key combinations (Chords) for special actions
@@ -15,5 +15,4 @@ OS_DETECTION_ENABLE = yes   # Detect the connected OS (Win/Mac/Linux) for OLED/K
 # Debug
 CONSOLE_ENABLE = no
 
-RGB_MATRIX_CUSTOM_USER = yes
 RAW_ENABLE = yes
