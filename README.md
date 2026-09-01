@@ -1,7 +1,23 @@
 # SofleRGB
 
-Vial-QMK firmware for the Sofle RGB — three keymaps, pick one, build it, flash it.
+Custom Vial-QMK firmware for the Sofle RGB.
 
+Choose between a stock Vial configuration, customizable per-key RGB
+lighting, or the RGB configuration with an integrated audio visualizer.
+
+                     ┌─────────────┐
+                     │    Sofle    │
+                     │     RGB     │
+                     └──────┬──────┘
+                            │
+          ┌─────────────────┼─────────────────┐
+          │                 │                 │
+          ▼                 ▼                 ▼
+       `vial`          `keyColors`        `comboRGB`
+     Stock Vial       Per-key RGB       Per-key RGB
+     configuration    via WebGUI        + Audio Visualizer
+
+## Prebuilt Firmware
 Don't want to build it yourself? Prebuilt `.uf2` files are in [`firmware/`](firmware/) — skip to [Flashing](docs/flashing.md).
 The precompiled firmware ..keyColors & ...comboRGB both include the keypeek module, so this will work directly.
 
