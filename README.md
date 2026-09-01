@@ -3,6 +3,7 @@
 Vial-QMK firmware for the Sofle RGB — three keymaps, pick one, build it, flash it.
 
 Don't want to build it yourself? Prebuilt `.uf2` files are in [`firmware/`](firmware/) — skip to [Flashing](docs/flashing.md).
+The precompiled firmware ..keyColors & ...comboRGB both include the keypeek module, so this will work directly.
 
 ## Which keymap?
 
