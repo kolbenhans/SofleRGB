@@ -145,6 +145,12 @@ See the [WebGUI Usage Guide](docs/webgui.md).
 
 ---
 
+## Layer Control
+
+The `keyColors` and `comboRGB` keymaps can switch layers over Raw HID, e.g. by the focused window with [layerhook](https://github.com/kolbenhans/layerhook).
+
+---
+
 ## Audio Visualizer
 
 The `comboRGB` keymap adds an audio visualizer to the per-key RGB system.
